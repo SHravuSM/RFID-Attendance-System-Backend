@@ -3,9 +3,9 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const schools = require("../routes/schools.js");
+const Institutions = require("../routes/institutions.js");
 const serviceRequestRoutes = require("../routes/serviceRequestRoutes");
-const Attendances = require("../routes/AttendanceOfStudent.js");
+const Attendances = require("../routes/Attendances.js");
 const servicerequests = require("../routes/servicerequests");
 const Students = require("../routes/students");
 const Teachers = require("../routes/Teachers.js");
@@ -22,7 +22,7 @@ app.use(express.json());
 // Routes
 app.use("/api", serviceRequestRoutes);
 app.use("/api/servicerequests", servicerequests);
-app.use("/api/schools", schools);
+app.use("/api/institutions", Institutions);
 app.use("/api/rfid", Attendances);
 app.use("/api/students", Students);
 app.use("/api/teachers", Teachers);
@@ -42,4 +42,6 @@ mongoose
 
 // Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`Server running on port ${(PORT, process.env.API_URL)}`)
+);

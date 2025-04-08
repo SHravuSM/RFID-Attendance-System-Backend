@@ -1,84 +1,97 @@
 const express = require("express");
 const router = express.Router();
-const bcrypt = require("bcryptjs"); // For password hashing
-const School = require("../models/School");
+const bcrypt = require("bcryptjs");
+const Institution = require("../models/Institution");
 const ServiceRequest = require("../models/ServiceRequest");
 
-// GET - Fetch All Service Requests
+// GET - Fetch all service requests
 router.get("/", async (req, res) => {
   try {
     const requests = await ServiceRequest.find();
     res.status(200).json(requests);
   } catch (error) {
+    console.error("Error fetching service requests:", error);
     res.status(500).json({ message: "Server error. Try again later." });
   }
 });
 
-// Function to generate a unique school ID
-const generateSchoolID = (name) => {
-  // Remove spaces, convert to uppercase, and take the first 3 letters
+// Utility function to generate a unique institution code
+const generateInstitutionCode = (name) => {
   const namePart = name.toUpperCase().replace(/\s+/g, "").slice(0, 3);
-
-  // Generate a random 3-digit number
-  const randomPart = Math.floor(100 + Math.random() * 900); // Ensures a 3-digit number
-
+  const randomPart = Math.floor(100 + Math.random() * 900);
   return `${namePart}${randomPart}`;
 };
 
-// Function to generate a random password
+// Utility function to generate a random 8-character password
 const generateRandomPassword = () => {
-  return Math.random().toString(36).slice(-8); // 8-character password
+  return Math.random().toString(36).slice(-8);
 };
 
-// PUT - Approve a Service Request and create a school record
 router.put("/:id/approve", async (req, res) => {
   try {
     const request = await ServiceRequest.findById(req.params.id);
     if (!request) {
-      return res.status(404).json({ message: "Request not found." });
+      return res.status(404).json({ message: "Service request not found." });
     }
 
-    // Generate School ID and Password
-    const schoolCode = generateSchoolID(request.name); // ✅ Assign schoolCode
-    console.log(schoolCode);
-    const plainPassword = generateRandomPassword();
-    const hashedPassword = await bcrypt.hash(plainPassword, 10); // Hash the password
+    // Validate required fields
+    const { principalName, contactNumber, address, email, institutionName } =
+      request;
 
-    // Save school in the database
-    const newSchool = new School({
-      name: request.name,
-      principal: request.principal,
-      contact: request.contact,
-      address: request.address,
-      email: request.email,
-      schoolCode: schoolCode, // ✅ Assign schoolCode here
+    if (
+      !principalName ||
+      !contactNumber ||
+      !address ||
+      !email ||
+      !institutionName
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Missing required fields in the service request." });
+    }
+
+    const institutionCode = generateInstitutionCode(institutionName);
+    const plainPassword = generateRandomPassword();
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+    const newInstitution = new Institution({
+      principalName,
+      contactNumber,
+      address,
+      email,
+      institutionName,
+      institutionCode,
       password: hashedPassword,
+      subscriptionStatus: "expired",
+      deviceIds: [],
     });
 
-    await newSchool.save();
-
-    // Delete the approved request from ServiceRequests collection
+    await newInstitution.save();
     await ServiceRequest.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
-      schoolCode: schoolCode,
-      password: plainPassword, // Send plain password for reference (optional)
+      message: "Institution approved and created successfully.",
+      institutionCode,
+      password: plainPassword, // ⚠️ Only for testing — remove in production
     });
   } catch (error) {
-    console.error("Approval Error:", error);
+    console.error("Error approving service request:", error);
     res.status(500).json({ message: "Server error. Try again later." });
   }
 });
 
-// DELETE - Remove a Service Request
+// DELETE - Remove a service request
 router.delete("/:id", async (req, res) => {
   try {
     const request = await ServiceRequest.findByIdAndDelete(req.params.id);
+
     if (!request) {
-      return res.status(404).json({ message: "Request not found." });
+      return res.status(404).json({ message: "Service request not found." });
     }
-    res.status(200).json({ message: "Request deleted successfully." });
+
+    res.status(200).json({ message: "Service request deleted successfully." });
   } catch (error) {
+    console.error("Error deleting service request:", error);
     res.status(500).json({ message: "Server error. Try again later." });
   }
 });

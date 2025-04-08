@@ -1,0 +1,9 @@
+{ uid: 'b3f512d', deviceId: 'RFID-2025-001' } req
+
+{ uid: '3171b52', deviceId: 'RFID-2025-001' } req
+
+Approved: School ID: HEM126, Password: gafrk3wu
+
+Approved: School ID: SHR163, Password: 89ze663j
+
+Approved: School ID: MAN733, Password: x8dfvnyx

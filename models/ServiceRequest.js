@@ -2,11 +2,11 @@ const mongoose = require("mongoose");
 
 const serviceRequestSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    institutionName: { type: String, required: true },
     address: { type: String, required: true },
-    principal: { type: String, required: true },
-    email: { type: String, required: true },
-    contact: { type: String, required: true },
+    principalName: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    contactNumber: { type: String, required: true },
   },
   { timestamps: true }
 );

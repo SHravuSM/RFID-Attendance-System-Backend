@@ -7,9 +7,9 @@ const studentSchema = new mongoose.Schema({
   rollNumber: String,
   parentName: String,
   parentContactNumber: String,
-  schoolName: String,
-  schoolCode: { type: String, required: true }, // School identifier
-  rfid: { type: String, unique: true }, // Ensure RFID is unique
+  institutionName: String,
+  institutionCode: { type: String, required: true },
+  rfid: { type: String, unique: true, required: true }, // Unique RFID
 });
 
 module.exports = mongoose.model("students", studentSchema);
