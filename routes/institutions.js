@@ -107,7 +107,7 @@ router.get("/home", async (req, res) => {
       email: institution.email,
       totalTeachers,
       totalClasses,
-      attendancePercentage,
+      attendancePercentage
     });
   } catch (error) {
     console.error("Error in /home:", error);
