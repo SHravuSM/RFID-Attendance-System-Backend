@@ -101,8 +101,10 @@ router.get("/home", async (req, res) => {
         : "0.0%";
 
     res.json({
+      principalName: institution.principalName,
       institutionName,
       totalStudents,
+      email: institution.email,
       totalTeachers,
       totalClasses,
       attendancePercentage,
