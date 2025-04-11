@@ -9,8 +9,10 @@ const Attendance = require("../models/Attendance");
 // Get all Institutions
 router.get("/", async (req, res) => {
   try {
-    const Institutions = await Institution.find();
-    res.json(Institutions);
+    const Institution = await Institution.find({
+      institutionCode: req.user.institutionCode,
+    });
+    res.json(Institution);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -20,7 +22,7 @@ router.get("/", async (req, res) => {
 router.post("/change-password", async (req, res) => {
   const { institutionCode } = req.user;
   const { currentPassword, newPassword } = req.body;
-  console.log(currentPassword, newPassword);
+  //console.log(currentPassword, newPassword);
 
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: "Both fields are required." });
@@ -34,7 +36,7 @@ router.post("/change-password", async (req, res) => {
 
     // Validate current password
     const isMatch = await bcrypt.compare(currentPassword, institution.password);
-    console.log(isMatch, "Success");
+    //console.log(isMatch, "Success");
     if (!isMatch) {
       return res.status(401).json({ error: "Current password is incorrect." });
     }
@@ -44,7 +46,7 @@ router.post("/change-password", async (req, res) => {
     // Update the password
     institution.password = hashedNewPassword;
     await institution.save();
-    console.log("Success");
+    //console.log("Success");
 
     res.status(200).json({ message: "Password updated successfully." });
   } catch (error) {
@@ -107,7 +109,9 @@ router.get("/home", async (req, res) => {
       email: institution.email,
       totalTeachers,
       totalClasses,
-      attendancePercentage
+      subsctiptionEndsOn: institution.subscriptionEndDate,
+      subscriptionStatus: institution.subscriptionStatus,
+      attendancePercentage,
     });
   } catch (error) {
     console.error("Error in /home:", error);
@@ -115,74 +119,74 @@ router.get("/home", async (req, res) => {
   }
 });
 
-// POST /admin/assign-device
-router.post("/assign-device", async (req, res) => {
-  const { institutionCode, deviceId } = req.body;
-  console.log("Assign Device Request:", req.body);
-  console.log("Institution Code:", institutionCode);
-  console.log("Device ID:", deviceId);
-  try {
-    const institution = await Institution.findOne({ institutionCode });
-    if (!institution)
-      return res.status(404).json({ message: "Institution not found" });
+// // POST /admin/assign-device
+// router.post("/assign-device", async (req, res) => {
+//   const { institutionCode, deviceId } = req.body;
+//   console.log("Assign Device Request:", req.body);
+//   console.log("Institution Code:", institutionCode);
+//   console.log("Device ID:", deviceId);
+//   try {
+//     const institution = await Institution.findOne({ institutionCode });
+//     if (!institution)
+//       return res.status(404).json({ message: "Institution not found" });
 
-    // Prevent duplicate
-    if (institution.deviceIds.includes(deviceId)) {
-      return res
-        .status(400)
-        .json({ message: "Device already assigned to this institution" });
-    }
+//     // Prevent duplicate
+//     if (institution.deviceIds.includes(deviceId)) {
+//       return res
+//         .status(400)
+//         .json({ message: "Device already assigned to this institution" });
+//     }
 
-    institution.deviceIds.push(deviceId);
-    await institution.save();
+//     institution.deviceIds.push(deviceId);
+//     await institution.save();
 
-    res.json({ message: `Device ${deviceId} assigned successfully.` });
-  } catch (err) {
-    console.error("Assign error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+//     res.json({ message: `Device ${deviceId} assigned successfully.` });
+//   } catch (err) {
+//     console.error("Assign error:", err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// });
 
 // POST - Change password (institution must be authenticated)
-router.post("/changepassword", async (req, res) => {
-  // console.log("Change Password Request:", req.body);
-  const { institutionCode, currentPassword, newPassword } = req.body;
-  console.log(institutionCode, currentPassword, newPassword);
+// router.post("/changepassword", async (req, res) => {
+//   // console.log("Change Password Request:", req.body);
+//   const { institutionCode, currentPassword, newPassword } = req.body;
+//   console.log(institutionCode, currentPassword, newPassword);
 
-  try {
-    // const institution = await Institution.findById(institutionCode);
-    const institution = await Institution.findOne({ institutionCode });
+//   try {
+//     // const institution = await Institution.findById(institutionCode);
+//     const institution = await Institution.findOne({ institutionCode });
 
-    if (!institution) {
-      return res.status(404).json({ message: "Institution not found." });
-    }
+//     if (!institution) {
+//       return res.status(404).json({ message: "Institution not found." });
+//     }
 
-    // Compare current password with hashed password
-    const isMatch = await bcrypt.compare(currentPassword, institution.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Incorrect current password." });
-    }
+//     // Compare current password with hashed password
+//     const isMatch = await bcrypt.compare(currentPassword, institution.password);
+//     if (!isMatch) {
+//       return res.status(401).json({ message: "Incorrect current password." });
+//     }
 
-    // Hash and update to new password
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    institution.password = hashedNewPassword;
-    await institution.save();
+//     // Hash and update to new password
+//     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+//     institution.password = hashedNewPassword;
+//     await institution.save();
 
-    res.status(200).json({ message: "Password changed successfully." });
-  } catch (error) {
-    console.error("Password Change Error:", error);
-    res.status(500).json({ message: "Server error. Try again later." });
-  }
-});
+//     res.status(200).json({ message: "Password changed successfully." });
+//   } catch (error) {
+//     console.error("Password Change Error:", error);
+//     res.status(500).json({ message: "Server error. Try again later." });
+//   }
+// });
 
 // Delete school
-router.delete("/:id", async (req, res) => {
-  try {
-    await Institution.findByIdAndDelete(req.params.id);
-    res.json({ message: "Institution deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
+// router.delete("/:id", async (req, res) => {
+//   try {
+//     await Institution.findByIdAndDelete(req.params.id);
+//     res.json({ message: "Institution deleted successfully" });
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// });
 
 module.exports = router;

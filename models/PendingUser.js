@@ -9,4 +9,4 @@ const pendingUserSchema = new mongoose.Schema({
   detectedAt: { type: Date, default: Date.now }, // Timestamp of detection
 });
 
-module.exports = mongoose.model("pendingusers", pendingUserSchema);
+module.exports = mongoose.model("pendinguser", pendingUserSchema);

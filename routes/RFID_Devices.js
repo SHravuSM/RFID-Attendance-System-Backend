@@ -23,7 +23,7 @@ router.get("/", async (req, res) => {
           institution.subscriptionStatus === "active" ? "Active" : "Inactive",
       }))
     );
-    console.log(devices);
+    //console.log(devices);
     res.json(devices);
   } catch (error) {
     console.error("Error fetching devices:", error);
@@ -34,7 +34,7 @@ router.get("/", async (req, res) => {
 // DELETE device
 router.delete("/:deviceId", async (req, res) => {
   const { deviceId } = req.params;
-  console.log(deviceId);
+  //console.log(deviceId);
 
   try {
     // Find institution that has this device
@@ -48,7 +48,7 @@ router.delete("/:deviceId", async (req, res) => {
       (id) => id !== deviceId
     );
     await institution.save();
-    console.log(institution.deviceIds);
+    //console.log(institution.deviceIds);
     res.status(200).json({ message: "Device deleted successfully" });
   } catch (err) {
     console.error("Error deleting device:", err);

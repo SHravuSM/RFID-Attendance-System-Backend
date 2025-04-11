@@ -1,32 +1,3 @@
-// router.get("/", async (req, res) => {
-//   try {
-//     const { institutionCode } = req.user;
-
-//     if (!institutionCode) {
-//       return res.status(400).json({ error: "Institution code is missing" });
-//     }
-
-//     const institution = await Institution.findOne({ institutionCode });
-//     const students = await Student.find({
-//       institutionCode: req.user.institutionCode,
-//     });
-
-//     if (!institution) {
-//       return res.status(404).json({ error: "Institution not found" });
-//     }
-
-//     return res.status(200).json({
-//       classes: institution.classes,
-//       students,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching classes:", error);
-//     return res.status(500).json({ error: "Internal Server Error" });
-//   }
-// });
-
-// Add a new class
-
 const express = require("express");
 const router = express.Router();
 const Institution = require("../models/Institution");
@@ -45,6 +16,8 @@ router.get("/", async (req, res) => {
     if (!institution) {
       return res.status(404).json({ error: "Institution not found." });
     }
+
+    cons;
 
     const today = new Date().toISOString().split("T")[0];
     const classInfo = await Promise.all(
@@ -115,7 +88,66 @@ router.get("/", async (req, res) => {
   }
 });
 
-module.exports = router;
+router.get("/classnames", async (req, res) => {
+  const { institutionCode } = req.user;
+
+  const institution = await Institution.findOne({ institutionCode });
+  if (!institution) {
+    return res.status(404).json({ error: "Institution not found" });
+  }
+
+  // Get all students of the institution
+  const allStudents = await Student.find({ institutionCode });
+
+  // Get only attendance records of students in this institution
+  const attendanceRecords = await Attendance.find({
+    institutionCode,
+    role: "student",
+  });
+
+  const result = institution.classes.map((className) => {
+    // Filter students of current class
+    const classStudents = allStudents.filter(
+      (student) => student.className === className
+    );
+
+    const studentCount = classStudents.length;
+
+    // Filter attendance records for students in this class
+    const classAttendance = attendanceRecords.filter((record) =>
+      classStudents.some((s) => s.rfid === record.rfid)
+    );
+
+    // Calculate average attendance
+    let totalPercentage = 0;
+    let validCount = 0;
+
+    classAttendance.forEach((studentRecord) => {
+      const totalDays = studentRecord.attendance.length;
+
+      const presentDays = studentRecord.attendance.filter(
+        (day) => day.morningEntry || day.eveningEntry
+      ).length;
+
+      if (totalDays > 0) {
+        const percentage = (presentDays / totalDays) * 100;
+        totalPercentage += percentage;
+        validCount++;
+      }
+    });
+
+    const averageAttendance =
+      validCount > 0 ? (totalPercentage / validCount).toFixed(2) : "N/A";
+
+    return {
+      className,
+      studentCount,
+      averageAttendance: `${averageAttendance}%`,
+    };
+  });
+
+  return res.json(result);
+});
 
 router.post("/add", async (req, res) => {
   try {
@@ -135,16 +167,17 @@ router.post("/add", async (req, res) => {
     }
 
     // Check if class already exists (case-insensitive)
-    const alreadyExists = institution.classes.some(
-      (cls) => cls.className == className
-    );
+    // const alreadyExists = institution.classes.some(
+    //   (cls) => cls.className == className
+    // );
 
-    if (alreadyExists) {
-      return res.status(409).json({ error: "Class already exists" });
-    }
+    // if (alreadyExists) {
+    //   return res.status(409).json({ error: "Class already exists" });
+    // }
 
     // Push the class object — MongoDB will auto-generate the `_id`
-    institution.classes.push({ className });
+    institution.classes.push(className);
+    //console.log(institution.classes);
     await institution.save();
 
     res.status(201).json({
@@ -157,23 +190,30 @@ router.post("/add", async (req, res) => {
   }
 });
 
-router.delete("/delete/:id", async (req, res) => {
-  const id = req.params.id;
-  const updatedInstitution = await Institution.findOneAndUpdate(
-    { institutionCode: req.user.institutionCode },
-    {
-      $pull: { classes: { _id: id } }, // This removes the matching class by ID
-    },
-    { new: true } // Return the updated document after deletion
-  );
+router.delete("/delete/:className", async (req, res) => {
+  try {
+    const className = req.params.className;
 
-  if (!updatedInstitution) {
-    return res.status(404).json({ message: "Institution not found" });
+    const updatedInstitution = await Institution.findOneAndUpdate(
+      { institutionCode: req.user.institutionCode },
+      {
+        $pull: { classes: className }, // Remove the class string
+      },
+      { new: true } // Return the updated institution document
+    );
+
+    if (!updatedInstitution) {
+      return res.status(404).json({ message: "Institution not found" });
+    }
+
+    res.json({
+      message: "Class deleted successfully",
+      classes: updatedInstitution.classes,
+    });
+  } catch (err) {
+    console.error("Error deleting class:", err);
+    res.status(500).json({ message: "Internal Server Error" });
   }
-  res.json({
-    message: "Class deleted successfully",
-    classes: updatedInstitution.classes,
-  });
 });
 
 module.exports = router;

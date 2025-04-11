@@ -7,15 +7,16 @@ const Attendances = require("./Attendances.js");
 const servicerequests = require("./servicerequests.js");
 const Students = require("./students.js");
 const Teachers = require("./Teachers.js");
+const Account = require("./Account.js");
 const Classes = require("./Classes.js");
 
 router.use(verifyToken, allowRoles("institution")); // 🔐 applies to all routes below
 
 router.use("/institutions", Institutions);
 router.use("/rfid", Attendances);
-router.use("/servicerequests", servicerequests);
 router.use("/students", Students);
 router.use("/teachers", Teachers);
 router.use("/classes", Classes);
+router.use("/account", Account);
 
 module.exports = router;

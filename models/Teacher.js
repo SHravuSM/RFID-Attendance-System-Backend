@@ -16,4 +16,4 @@ const teacherSchema = new mongoose.Schema({
   password: String,
 });
 
-module.exports = mongoose.model("teachers", teacherSchema);
+module.exports = mongoose.model("teacher", teacherSchema);

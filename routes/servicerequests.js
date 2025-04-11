@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
 
 // Utility function to generate a unique institution code
 const generateInstitutionCode = (name) => {
-  const namePart = name.toUpperCase().replace(/\s+/g, "").slice(0, 3);
+  const namePart = name.toUpperCase().replace(/\s+/g, "").slice(0, 4);
   const randomPart = Math.floor(100 + Math.random() * 900);
   return `${namePart}${randomPart}`;
 };
@@ -30,11 +30,6 @@ const generateRandomPassword = () => {
 router.put("/:id/approve", async (req, res) => {
   try {
     const request = await ServiceRequest.findById(req.params.id);
-    if (!request) {
-      return res.status(404).json({ message: "Service request not found." });
-    }
-
-    // Validate required fields
     const { principalName, contactNumber, address, email, institutionName } =
       request;
 
@@ -52,27 +47,25 @@ router.put("/:id/approve", async (req, res) => {
 
     const institutionCode = generateInstitutionCode(institutionName);
     const plainPassword = generateRandomPassword();
-    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+    const password = await bcrypt.hash(plainPassword, 10);
 
-    const newInstitution = new Institution({
+    await Institution.create({
       principalName,
       contactNumber,
+      role: "institution",
       address,
       email,
       institutionName,
       institutionCode,
-      password: hashedPassword,
+      password,
       subscriptionStatus: "expired",
-      deviceIds: [],
     });
-
-    await newInstitution.save();
     await ServiceRequest.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       message: "Institution approved and created successfully.",
       institutionCode,
-      password: plainPassword, // ⚠️ Only for testing — remove in production
+      password: plainPassword,
     });
   } catch (error) {
     console.error("Error approving service request:", error);
@@ -81,13 +74,9 @@ router.put("/:id/approve", async (req, res) => {
 });
 
 // DELETE - Remove a service request
-router.delete("/:id", async (req, res) => {
+router.delete("/:id/reject", async (req, res) => {
   try {
-    const request = await ServiceRequest.findByIdAndDelete(req.params.id);
-
-    if (!request) {
-      return res.status(404).json({ message: "Service request not found." });
-    }
+    await ServiceRequest.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ message: "Service request deleted successfully." });
   } catch (error) {

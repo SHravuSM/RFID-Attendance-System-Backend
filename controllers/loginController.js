@@ -19,14 +19,14 @@ const login = async (req, res) => {
 
   try {
     // 🔍 Check Admin
-    let user = await Admin.findOne({ username: Id });
+    let user = await Admin.findOne({ name: Id });
     if (user) {
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch)
         return res.status(401).json({ message: "Invalid password." });
 
       const token = jwt.sign(
-        { id: user._id, role: user.role, username: user.username },
+        { id: user._id, role: user.role, name: user.name },
         JWT_SECRET,
         { expiresIn: "1d" }
       );
@@ -43,7 +43,7 @@ const login = async (req, res) => {
       const token = jwt.sign(
         {
           id: user._id,
-          role: "institution",
+          role: user.role,
           institutionCode: user.institutionCode,
           institutionName: user.institutionName,
         },
@@ -64,7 +64,7 @@ const login = async (req, res) => {
       const token = jwt.sign(
         {
           id: user._id,
-          role: "teacher",
+          role: user.role,
           name: user.name,
           institutionCode: user.institutionCode,
         },
@@ -79,7 +79,6 @@ const login = async (req, res) => {
       });
     }
 
-    // ❌ No user found
     return res.status(404).json({ message: "User not found." });
   } catch (error) {
     console.error("Login Error:", error);

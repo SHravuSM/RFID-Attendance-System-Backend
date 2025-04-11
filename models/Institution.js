@@ -9,17 +9,17 @@ const institutionSchema = new mongoose.Schema({
   institutionName: { type: String, unique: true, required: true },
   institutionCode: { type: String, unique: true, required: true },
   password: String,
-  subscriptionStatus: { type: String, default: "expired" }, // Default status is "expired"
-  subscriptionStartDate: { type: Date, default: Date.now },
-  subscriptionEndDate: { type: Date, default: Date.now },
-  // classes: [String], // Array of class names
-  classes: [
+  allsubscriptions: [
     {
-      className: String,
-      _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+      subscribedDate: { type: String, required: true }, // Store as IST string
     },
   ],
+  subscriptionStatus: { type: String, default: "expired" }, // Default status is "expired"
+  subscriptionStartDate: { type: String, default: Date.now },
+  subscriptionEndDate: { type: String, default: Date.now },
+  // classes: [String], // Array of class names
+  classes: [String],
   deviceIds: [String], // Array of registered RFID device IDs
 });
 
-module.exports = mongoose.model("institutions", institutionSchema);
+module.exports = mongoose.model("institution", institutionSchema);

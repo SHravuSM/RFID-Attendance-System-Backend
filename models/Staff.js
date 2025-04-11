@@ -11,4 +11,4 @@ const staffSchema = new mongoose.Schema({
   rfid: { type: String, required: true }, // Unique RFID
 });
 
-module.exports = mongoose.model("staffs", staffSchema);
+module.exports = mongoose.model("staff", staffSchema);

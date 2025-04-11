@@ -8,10 +8,10 @@ const attendanceSchema = new mongoose.Schema({
   attendance: [
     {
       date: { type: String, required: true }, // Store date as "YYYY-MM-DD"
-      morningEntry: { type: Date, default: null }, // Morning scan
-      eveningEntry: { type: Date, default: null }, // Evening scan
+      morningEntry: String, // Morning a
+      eveningEntry: String, // Evening scan
     },
   ],
 });
 
-module.exports = mongoose.model("attendances", attendanceSchema);
+module.exports = mongoose.model("attendance", attendanceSchema);

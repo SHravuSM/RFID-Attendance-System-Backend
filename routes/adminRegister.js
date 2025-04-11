@@ -6,6 +6,7 @@ const Admin = require("../models/Admin");
 // Temporary one-time route to create the first admin
 router.post("/puneethrajkumar18sh", async (req, res) => {
   const { username, password } = req.body;
+  // console.log(username, password);
 
   if (!username || !password) {
     return res.status(400).json({ message: "Username and password required." });
@@ -19,20 +20,14 @@ router.post("/puneethrajkumar18sh", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newAdmin = new Admin({
-      username,
+    await Admin.create({
+      name: username,
       password: hashedPassword,
-      role: "admin", // or "superadmin" if you're planning role escalation
+      role: "admin",
     });
-
-    await newAdmin.save();
-
     res.status(201).json({
       message: "Initial admin created successfully.",
-      admin: {
-        username: newAdmin.username,
-        role: newAdmin.role,
-      },
+      username,
     });
   } catch (error) {
     console.error("Error creating initial admin:", error);

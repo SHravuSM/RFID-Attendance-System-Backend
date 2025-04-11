@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middlewares/verifyToken");
 const allowRoles = require("../middlewares/allowRoles.js");
-const Institutions = require("./institutions.js");
+const AInstitutions = require("./AInstitutions.js");
 const Attendances = require("./Attendances.js");
 const servicerequests = require("./servicerequests.js");
 const Students = require("./students.js");
@@ -11,7 +11,7 @@ const RFID_Devices = require("./RFID_Devices.js");
 
 router.use(verifyToken, allowRoles("admin")); // 🔐 applies to all routes below
 
-router.use("/institutions", Institutions);
+router.use("/institutions", AInstitutions);
 router.use("/rfid", Attendances);
 router.use("/servicerequests", servicerequests);
 router.use("/students", Students);

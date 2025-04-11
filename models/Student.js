@@ -12,4 +12,4 @@ const studentSchema = new mongoose.Schema({
   rfid: { type: String, unique: true, required: true }, // Unique RFID
 });
 
-module.exports = mongoose.model("students", studentSchema);
+module.exports = mongoose.model("student", studentSchema);

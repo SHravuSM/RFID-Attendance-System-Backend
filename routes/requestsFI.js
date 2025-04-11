@@ -10,7 +10,7 @@ router.post("/institution-request", async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    const newRequest = new ServiceRequest({
+    await ServiceRequest.create({
       institutionName: name,
       address: address,
       principalName: principal,
@@ -18,7 +18,6 @@ router.post("/institution-request", async (req, res) => {
       contactNumber: contact,
     });
 
-    await newRequest.save();
     res.status(201).json({
       message: "Request received successfully. We will reach out you Soon..",
     });
