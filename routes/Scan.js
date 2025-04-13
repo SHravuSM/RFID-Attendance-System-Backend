@@ -11,12 +11,8 @@ const PendingUser = require("../models/PendingUser");
 //   try {
 //     const now = new Date();
 //     const { uid: rfid, deviceId } = req.body;
-//     console.log(rfid, "Hi");
-
 //     const currentDate = now.toISOString().split("T")[0];
 //     const currentTime = now.toTimeString().split(" ")[0];
-
-//     //console.log(rfid, deviceId);
 
 //     const institution = await Institution.findOne({ deviceIds: deviceId });
 //     if (!institution) {
@@ -24,6 +20,7 @@ const PendingUser = require("../models/PendingUser");
 //         .status(404)
 //         .json({ error: "Institution not found for this device" });
 //     }
+
 //     const institutionCode = institution.institutionCode;
 //     const collections = [Student, Teacher, Staff];
 
@@ -33,17 +30,16 @@ const PendingUser = require("../models/PendingUser");
 //       if (user) break;
 //     }
 
-//     console.log(user, "At user");
-
-//     if (user != null) {
+//     if (user) {
 //       const hour = now.getHours();
-//       console.log("Hi");
+
 //       let attendanceRecord = await Attendance.findOne({
 //         name: user.name,
 //         role: user.role,
 //         rfid: user.rfid,
 //         institutionCode: user.institutionCode,
 //       });
+
 //       if (!attendanceRecord) {
 //         attendanceRecord = new Attendance({
 //           name: user.name,
@@ -53,41 +49,75 @@ const PendingUser = require("../models/PendingUser");
 //           attendance: [],
 //         });
 //       }
-//       attendanceRecord.save();
 
 //       let todayEntry = attendanceRecord.attendance.find(
 //         (entry) => entry.date === currentDate
 //       );
+
+//       console.log(todayEntry);
+
+//       // if (!todayEntry) {
+//       //   todayEntry = {
+//       //     date: currentDate,
+//       //     morningEntry: null,
+//       //     eveningEntry: null,
+//       //   };
+//       //   todayEntry.morningEntry = currentTime;
+//       //   attendanceRecord.attendance.push(todayEntry);
+//       // } else {
+//       //   todayEntry.eveningEntry = currentTime;
+//       // }
+
+//       // if (hour < 12) {
+//       //   todayEntry.morningEntry = currentTime;
+//       //   todayEntry.eveningEntry = null;
+//       // } else if (hour >= 12 && todayEntry.morningEntry) {
+//       //   todayEntry.eveningEntry = currentTime;
+//       // } else {
+//       //   return res
+//       //     .status(400)
+//       //     .json({ message: "Entry already exists for this session" });
+//       // }
 //       if (!todayEntry) {
 //         todayEntry = {
 //           date: currentDate,
-//           morningEntry: "Pass",
+//           morningEntry: null,
 //           eveningEntry: null,
 //         };
-//         attendanceRecord.attendance.push(todayEntry);
-//       }
 
-//       if (hour < 12 && todayEntry.morningEntry != null) {
-//         todayEntry.morningEntry = "Pass";
-//       } else if (hour >= 12 && todayEntry.eveningEntry != null) {
-//         todayEntry.eveningEntry = "Pass";
+//         if (hour < 12) {
+//           todayEntry.morningEntry = currentTime;
+//         } else {
+//           todayEntry.eveningEntry = currentTime;
+//         }
+
+//         attendanceRecord.attendance.push(todayEntry);
 //       } else {
-//         return res
-//           .status(400)
-//           .json({ message: "Entry already exists for this session" });
+//         if (hour < 12) {
+//           if (!todayEntry.morningEntry) {
+//             todayEntry.morningEntry = currentTime;
+//           } else {
+//             return res
+//               .status(400)
+//               .json({ message: "Morning entry already exists." });
+//           }
+//         } else {
+//           if (!todayEntry.eveningEntry) {
+//             todayEntry.eveningEntry = currentTime;
+//           } else {
+//             return res
+//               .status(400)
+//               .json({ message: "Evening entry already exists." });
+//           }
+//         }
 //       }
 
 //       await attendanceRecord.save();
-//       return res.json({
-//         message: `${user.name} Present `,
-//         // name: user.name,
-//         // uid: user.rfid,
-//         // role: user.role,
-//         // status: "Present",
-//         // time: currentTime,
-//       });
+//       return res.json({ message: `${user.name} marked present.` });
 //     } else {
-//       if (!(await PendingUser.findOne({ rfid }))) {
+//       // User not found — add to pending list if not already there
+//       const alreadyPending = await PendingUser.findOne({ rfid });
+//       if (!alreadyPending) {
 //         const pending = new PendingUser({
 //           rfid,
 //           deviceId,
@@ -96,7 +126,7 @@ const PendingUser = require("../models/PendingUser");
 //         });
 //         await pending.save();
 //       }
-//       return res.json({ message: `${rfid} pending` });
+//       return res.json({ message: `${rfid} added to pending list.` });
 //     }
 //   } catch (err) {
 //     console.error("Error processing RFID scan:", err);
@@ -106,11 +136,35 @@ const PendingUser = require("../models/PendingUser");
 
 router.post("/scan", async (req, res) => {
   try {
-    const now = new Date();
     const { uid: rfid, deviceId } = req.body;
-    const currentDate = now.toISOString().split("T")[0];
-    const currentTime = now.toTimeString().split(" ")[0];
 
+    const now = new Date();
+
+    // Get hours, minutes, and seconds
+    let hours = now.getHours();
+    let minutes = now.getMinutes();
+    let seconds = now.getSeconds();
+
+    // Determine AM or PM
+    const ampm = hours >= 12 ? "PM" : "AM";
+
+    // Convert hours from 24-hour to 12-hour format
+    hours = hours % 12; // Convert hour to 12-hour format
+    hours = hours ? hours : 12; // Hour '0' should be '12'
+
+    // Pad minutes and seconds with leading zero if necessary
+    minutes = minutes < 10 ? "0" + minutes : minutes;
+    seconds = seconds < 10 ? "0" + seconds : seconds;
+
+    // Construct the time string
+    const currentTime = `${hours}:${minutes}:${seconds} ${ampm}`;
+
+    console.log(currentTime);
+
+    const currentDate = now.toISOString().split("T")[0];
+    const hour = now.getHours();
+
+    // Find the institution by device ID
     const institution = await Institution.findOne({ deviceIds: deviceId });
     if (!institution) {
       return res
@@ -128,8 +182,7 @@ router.post("/scan", async (req, res) => {
     }
 
     if (user) {
-      const hour = now.getHours();
-
+      // Check if attendance record exists
       let attendanceRecord = await Attendance.findOne({
         name: user.name,
         role: user.role,
@@ -147,39 +200,55 @@ router.post("/scan", async (req, res) => {
         });
       }
 
+      // Check today's attendance entry
       let todayEntry = attendanceRecord.attendance.find(
         (entry) => entry.date === currentDate
       );
 
-      console.log(todayEntry);
-
       if (!todayEntry) {
+        // Create new entry for today
         todayEntry = {
           date: currentDate,
           morningEntry: null,
           eveningEntry: null,
         };
-        todayEntry.morningEntry = currentTime;
+
+        if (hour < 12) {
+          todayEntry.morningEntry = currentTime;
+        } else {
+          todayEntry.eveningEntry = currentTime;
+        }
+
         attendanceRecord.attendance.push(todayEntry);
       } else {
-        todayEntry.eveningEntry = currentTime;
+        // Update existing entry for today
+        if (hour < 12) {
+          if (!todayEntry.morningEntry) {
+            todayEntry.morningEntry = currentTime;
+          } else {
+            console.log("Evening entry already exists.");
+            return res
+              .status(400)
+              .json({ message: "Morning entry already exists." });
+          }
+        } else {
+          if (!todayEntry.eveningEntry) {
+            todayEntry.eveningEntry = currentTime;
+          } else {
+            console.log("Evening entry already exists.");
+            return res
+              .status(400)
+              .json({ message: "Evening entry already exists." });
+          }
+        }
       }
 
-      if (hour < 12) {
-        todayEntry.morningEntry = currentTime;
-        todayEntry.eveningEntry = null;
-      } else if (hour >= 12 && todayEntry.morningEntry) {
-        todayEntry.eveningEntry = currentTime;
-      } else {
-        return res
-          .status(400)
-          .json({ message: "Entry already exists for this session" });
-      }
       await attendanceRecord.save();
       return res.json({ message: `${user.name} marked present.` });
     } else {
-      // User not found — add to pending list if not already there
+      // User not found — check if already in pending
       const alreadyPending = await PendingUser.findOne({ rfid });
+
       if (!alreadyPending) {
         const pending = new PendingUser({
           rfid,
@@ -189,6 +258,7 @@ router.post("/scan", async (req, res) => {
         });
         await pending.save();
       }
+
       return res.json({ message: `${rfid} added to pending list.` });
     }
   } catch (err) {

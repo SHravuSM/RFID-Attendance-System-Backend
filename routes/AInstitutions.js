@@ -6,6 +6,8 @@ const Teacher = require("../models/Teacher");
 const Student = require("../models/Student");
 const Attendance = require("../models/Attendance");
 const Admin = require("../models/Admin");
+const Staff = require("../models/Staff");
+const ServiceRequest = require("../models/ServiceRequest");
 
 // Get all Institutions
 router.get("/", async (req, res) => {
@@ -15,6 +17,119 @@ router.get("/", async (req, res) => {
     res.json(institution);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get("/institution/:institutionName", async (req, res) => {
+  try {
+    const institutionName = req.params.institutionName;
+
+    // 1. Fetch institution
+    const institution = await Institution.findOne({ institutionName });
+    if (!institution) {
+      return res.status(404).json({ message: "Institution not found" });
+    }
+
+    const institutionCode = institution.institutionCode;
+
+    // 2. Fetch students, teachers, staff
+    const students = await Student.find({ institutionCode });
+    const teachers = await Teacher.find({ institutionCode });
+    const staff = await Staff.find({ institutionCode });
+
+    // 3. Fetch attendance records
+    const attendanceRecords = await Attendance.find({ institutionCode });
+
+    // 4. Attendance calculations
+    let studentAttendance = [],
+      teacherAttendance = [],
+      staffAttendance = [];
+
+    attendanceRecords.forEach((record) => {
+      if (record.role === "student") studentAttendance.push(record);
+      else if (record.role === "teacher") teacherAttendance.push(record);
+      else if (record.role === "staff") staffAttendance.push(record);
+    });
+
+    // Helper: Calculate average attendance
+    const getAvgAttendance = (records) => {
+      if (records.length === 0) return 0;
+      let totalDays = 0;
+      let presentDays = 0;
+
+      records.forEach((record) => {
+        totalDays += record.attendance.length;
+        presentDays += record.attendance.filter(
+          (entry) => entry.morningEntry || entry.eveningEntry
+        ).length;
+      });
+
+      return totalDays === 0 ? 0 : ((presentDays / totalDays) * 100).toFixed(2);
+    };
+
+    const avgStudentAttendance = getAvgAttendance(studentAttendance);
+    const avgTeacherAttendance = getAvgAttendance(teacherAttendance);
+    const avgStaffAttendance = getAvgAttendance(staffAttendance);
+
+    // 5. Class-wise breakdown
+    const classStats = {};
+    students.forEach((student) => {
+      if (!classStats[student.className]) {
+        classStats[student.className] = {
+          studentCount: 0,
+          teacher:
+            teachers.find((t) => t.className === student.className)?.name ||
+            "Not Assigned",
+        };
+      }
+      classStats[student.className].studentCount += 1;
+    });
+
+    // 6. Compose the final response
+    const data = {
+      institution: {
+        principalName: institution.principalName,
+        email: institution.email,
+        contactNumber: institution.contactNumber,
+        institutionName: institution.institutionName,
+        institutionCode: institution.institutionCode,
+        address: institution.address,
+        classes: institution.classes,
+        subscriptionStatus: institution.subscriptionStatus,
+        subscriptionStartDate: institution.subscriptionStartDate,
+        subscriptionEndDate: institution.subscriptionEndDate,
+        allsubscriptions: institution.allsubscriptions,
+        totalDevices: institution.deviceIds.length,
+      },
+      subscriptions: {
+        currentStatus: institution.subscriptionStatus,
+        currentStartDate: institution.subscriptionStartDate,
+        currentEndDate: institution.subscriptionEndDate,
+        previousRecords: institution.allsubscriptions,
+      },
+      students: {
+        total: students.length,
+        averageAttendance: avgStudentAttendance + "%",
+        attendanceRecords: studentAttendance,
+      },
+      teachers: {
+        total: teachers.length,
+        averageAttendance: avgTeacherAttendance + "%",
+        attendanceRecords: teacherAttendance,
+      },
+      staff: {
+        total: staff.length,
+        averageAttendance: avgStaffAttendance + "%",
+        attendanceRecords: staffAttendance,
+      },
+      classWiseStats: classStats,
+    };
+
+    console.log(data);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error fetching institution data:", error);
+    res.status(500).json({ message: "Server Overloaded" });
   }
 });
 
@@ -53,33 +168,25 @@ router.post("/change-password", async (req, res) => {
 });
 
 router.get("/home", async (req, res) => {
-  const { institutionCode } = req.user;
   const today = new Date().toISOString().split("T")[0];
 
   try {
     // Fetch the institution to get class list
-    const institution = await Institution.findOne({ institutionCode });
-
-    const institutionName = institution.institutionName;
-
-    if (!institution) {
-      return res.status(404).json({ message: "Institution not found" });
-    }
-
-    const classes = institution.classes || []; // Array of class objects or strings
+    const institutions = await Institution.find({});
+    const pending = await ServiceRequest.countDocuments({});
+    const institution = institutions.length;
+    const totalDevices = institutions.reduce((acc, ist) => {
+      return acc + (ist.deviceIds?.length || 0);
+    }, 0);
 
     // Count total students in this institution
-    const totalStudents = await Student.countDocuments({ institutionCode });
+    const totalStudents = await Student.countDocuments({});
 
     // Count total teachers in this institution
-    const totalTeachers = await Teacher.countDocuments({ institutionCode });
-
-    // Count total classes from institution.classes array
-    const totalClasses = classes.length;
+    const totalTeachers = await Teacher.countDocuments({});
 
     // Fetch all student attendance records for today
     const attendances = await Attendance.find({
-      institutionCode,
       role: "student",
       "attendance.date": today,
     });
@@ -100,12 +207,11 @@ router.get("/home", async (req, res) => {
         : "0.0%";
 
     res.json({
-      principalName: institution.principalName,
-      institutionName,
       totalStudents,
-      email: institution.email,
       totalTeachers,
-      totalClasses,
+      totalDevices,
+      pending,
+      institution,
       attendancePercentage,
     });
   } catch (error) {

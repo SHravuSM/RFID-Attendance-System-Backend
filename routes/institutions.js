@@ -1,3 +1,4 @@
+const moment = require("moment");
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
@@ -5,6 +6,7 @@ const Institution = require("../models/Institution");
 const Teacher = require("../models/Teacher");
 const Student = require("../models/Student");
 const Attendance = require("../models/Attendance");
+const Staff = require("../models/Staff");
 
 // Get all Institutions
 router.get("/", async (req, res) => {
@@ -119,74 +121,67 @@ router.get("/home", async (req, res) => {
   }
 });
 
-// // POST /admin/assign-device
-// router.post("/assign-device", async (req, res) => {
-//   const { institutionCode, deviceId } = req.body;
-//   console.log("Assign Device Request:", req.body);
-//   console.log("Institution Code:", institutionCode);
-//   console.log("Device ID:", deviceId);
-//   try {
-//     const institution = await Institution.findOne({ institutionCode });
-//     if (!institution)
-//       return res.status(404).json({ message: "Institution not found" });
+router.get("/attendance/:role", async (req, res) => {
+  try {
+    const role = req.params.role;
+    const institutionCode = req.user.institutionCode;
 
-//     // Prevent duplicate
-//     if (institution.deviceIds.includes(deviceId)) {
-//       return res
-//         .status(400)
-//         .json({ message: "Device already assigned to this institution" });
-//     }
+    // Get institution
+    const institution = await Institution.findOne({ institutionCode });
+    if (!institution)
+      return res.status(404).json({ error: "Institution not found" });
 
-//     institution.deviceIds.push(deviceId);
-//     await institution.save();
+    // Attendance records for this institution and role
+    const attendanceRecords = await Attendance.find({
+      role,
+      institutionCode,
+    });
 
-//     res.json({ message: `Device ${deviceId} assigned successfully.` });
-//   } catch (err) {
-//     console.error("Assign error:", err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
+    let users = [];
+    let responseData = [];
 
-// POST - Change password (institution must be authenticated)
-// router.post("/changepassword", async (req, res) => {
-//   // console.log("Change Password Request:", req.body);
-//   const { institutionCode, currentPassword, newPassword } = req.body;
-//   console.log(institutionCode, currentPassword, newPassword);
+    if (role === "student") {
+      users = await Student.find({ institutionCode });
 
-//   try {
-//     // const institution = await Institution.findById(institutionCode);
-//     const institution = await Institution.findOne({ institutionCode });
+      const userMap = {};
+      users.forEach((u) => {
+        userMap[u.rfid] = {
+          className: u.className,
+          rollNumber: u.rollNumber,
+        };
+      });
 
-//     if (!institution) {
-//       return res.status(404).json({ message: "Institution not found." });
-//     }
+      responseData = attendanceRecords.map((record) => ({
+        ...record.toObject(),
+        className: userMap[record.rfid]?.className || "Unknown",
+        rollNumber: userMap[record.rfid]?.rollNumber || "Unknown",
+      }));
+    } else if (role === "teacher") {
+      users = await Teacher.find({ institutionCode });
 
-//     // Compare current password with hashed password
-//     const isMatch = await bcrypt.compare(currentPassword, institution.password);
-//     if (!isMatch) {
-//       return res.status(401).json({ message: "Incorrect current password." });
-//     }
+      const userMap = {};
+      users.forEach((u) => {
+        userMap[u.rfid] = {
+          className: u.className || "Not Assigned",
+        };
+      });
 
-//     // Hash and update to new password
-//     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-//     institution.password = hashedNewPassword;
-//     await institution.save();
+      responseData = attendanceRecords.map((record) => ({
+        ...record.toObject(),
+        className: userMap[record.rfid]?.className || "Unknown",
+      }));
+    } else if (role === "staff") {
+      responseData = attendanceRecords; // no className or rollNumber needed
+    } else {
+      return res.status(400).json({ error: "Invalid role specified" });
+    }
 
-//     res.status(200).json({ message: "Password changed successfully." });
-//   } catch (error) {
-//     console.error("Password Change Error:", error);
-//     res.status(500).json({ message: "Server error. Try again later." });
-//   }
-// });
-
-// Delete school
-// router.delete("/:id", async (req, res) => {
-//   try {
-//     await Institution.findByIdAndDelete(req.params.id);
-//     res.json({ message: "Institution deleted successfully" });
-//   } catch (error) {
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
+    console.log(responseData);
+    res.status(200).json(responseData);
+  } catch (err) {
+    console.error("Error fetching attendance by role:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 module.exports = router;

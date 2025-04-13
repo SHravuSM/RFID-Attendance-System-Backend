@@ -12,6 +12,6 @@ const attendanceSchema = new mongoose.Schema({
       eveningEntry: String, // Evening scan
     },
   ],
-});
+}); 
 
 module.exports = mongoose.model("attendance", attendanceSchema);

@@ -33,7 +33,7 @@ router.post("/register", async (req, res) => {
       institutionCode,
       password,
     } = req.body;
-    //console.log(req.body);
+    // console.log(req.body);
 
     if (!name || !rfid || !role || !institutionCode) {
       return res.status(400).json({ error: "All fields are required" });

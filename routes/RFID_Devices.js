@@ -20,7 +20,7 @@ router.get("/", async (req, res) => {
         id: deviceId,
         institutionName: institution.institutionName,
         status:
-          institution.subscriptionStatus === "active" ? "Active" : "Inactive",
+          institution.subscriptionStatus === "Active" ? "Active" : "expired",
       }))
     );
     //console.log(devices);
